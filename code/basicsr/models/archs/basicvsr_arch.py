@@ -4,11 +4,17 @@ from torch import nn
 
 from einops import rearrange
 from basicsr.models.archs.spynet_arch import SpyNet
+from basicsr.models.archs.RAFT.core.raft import RAFT
+from basicsr.models.archs.PWCNet.PWCNet import PWCNet
+from basicsr.models.archs.LiteFlowNet.LiteFlowNet import LiteFlowNet
 from basicsr.models.archs.arch_util import ResidualBlockNoBN, flow_warp, make_layer 
+
+import ipdb
+from basicsr.utils.visualizations import visualize_flow, visualize_image
 
 class BasicVSR(nn.Module):
     """BasicVSR: The Search for Essential Components in Video Super-Resolution and Beyond
-
+    
     Only support x4 upsampling.
 
     Args:
@@ -16,16 +22,24 @@ class BasicVSR(nn.Module):
             Default: 64.
         num_block (int): Block number of residual blocks in each propagation branch.
             Default: 30.
-        spynet_path (str): The path of Pre-trained SPyNet model.
+        opticalflow_path (str): The path of Pre-trained SPyNet model.
             Default: None.
     """
-    def __init__(self, num_feat=64, num_block=30, spynet_path=None):
+    def __init__(self, num_feat=64, num_block=30, opticalflow_path=None):
         super(BasicVSR, self).__init__()
         self.num_feat = num_feat
         self.num_block = num_block
 
         # Flow-based Feature Alignment
-        self.spynet = SpyNet(load_path=spynet_path)
+        if "raft" in opticalflow_path.lower():
+            small = True if "small" in opticalflow_path.lower() else False
+            self.opticalflow = RAFT(small = small, load_path=opticalflow_path)
+        elif "spynet" in opticalflow_path.lower():
+            self.opticalflow = SpyNet(load_path=opticalflow_path)
+        elif 'pwcnet' in opticalflow_path.lower():
+            self.opticalflow = PWCNet(load_path=opticalflow_path)
+        elif 'liteflownet' in opticalflow_path.lower():
+            self.opticalflow = LiteFlowNet(load_path=opticalflow_path)
 
         # Bidirectional Propagation
         self.forward_resblocks = ConvResBlock(num_feat + 3, num_feat, num_block)
@@ -62,9 +76,9 @@ class BasicVSR(nn.Module):
         n, t, c, h, w = lrs.size()
         forward_lrs = lrs[:, 1:, :, :, :].reshape(-1, c, h, w)    # n t c h w -> (n t) c h w
         backward_lrs = lrs[:, :-1, :, :, :].reshape(-1, c, h, w)  # n t c h w -> (n t) c h w
-        
-        forward_flow = self.spynet(forward_lrs, backward_lrs).view(n, t-1, 2, h, w)
-        backward_flow = self.spynet(backward_lrs, forward_lrs).view(n, t-1, 2, h, w)
+                
+        forward_flow = self.opticalflow(forward_lrs, backward_lrs).view(n, t-1, 2, h, w)
+        backward_flow = self.opticalflow(backward_lrs, forward_lrs).view(n, t-1, 2, h, w)
 
         return forward_flow, backward_flow
 

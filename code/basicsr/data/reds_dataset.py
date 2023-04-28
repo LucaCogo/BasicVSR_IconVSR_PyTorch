@@ -54,9 +54,9 @@ class REDSDataset(data.Dataset):
         self.gt_root, self.lq_root = Path(opt['dataroot_gt']), Path(
             opt['dataroot_lq'])
         self.flow_root = Path(
-            opt['dataroot_flow']) if opt['dataroot_flow'] is not None else None
-        assert opt['num_frame'] % 2 == 1, (
-            f'num_frame should be odd number, but got {opt["num_frame"]}')
+            opt['dataroot_flow']) if 'dataroot_flow' in opt.keys() and opt['dataroot_flow'] is not None else None
+        # assert opt['num_frame'] % 2 == 1, (
+        #     f'num_frame should be odd number, but got {opt["num_frame"]}')
         self.num_frame = opt['num_frame']
         self.num_half_frames = opt['num_frame'] // 2
 

@@ -1,8 +1,8 @@
 # general settings
-name: BasicVSR_REDS_Sharp_BI_nf15b8_x4
+name: BasicVSR_64x7__SpyNet_REDS
 model_type: BasicVSRModel
 scale: 4
-num_gpu: 2  # set num_gpu: 0 for cpu mode
+num_gpu: 1  # set num_gpu: 0 for cpu mode
 manual_seed: 10
 
 # dataset and data loader settings
@@ -10,8 +10,10 @@ datasets:
   train:
     name: REDS
     type: REDSRecurrentDataset
-    dataroot_gt: /root/proj/Datasets/REDS/sharp_data/train_sharp
-    dataroot_lq: /root/proj/Datasets/REDS/bicubic_data/train_sharp_bicubic/X4
+    # dataroot_gt: /root/proj/Datasets/REDS/sharp_data/train_sharp
+    # dataroot_lq: /root/proj/Datasets/REDS/bicubic_data/train_sharp_bicubic/X4
+    dataroot_gt: datasets/REDS/train/train_sharp
+    dataroot_lq: datasets/REDS/train/train_sharp_bicubic/X4
     meta_info_file: basicsr/data/meta_info/meta_info_REDS_GT.txt
     val_partition: REDS4  # set to 'official' when use the official validation partition
     io_backend:
@@ -28,16 +30,18 @@ datasets:
     # data loader
     use_shuffle: true
     num_worker_per_gpu: 6
-    batch_size_per_gpu: 4
-    dataset_enlarge_ratio: 200
+    batch_size_per_gpu: 2
+    dataset_enlarge_ratio: 1
     prefetch_mode: ~
     pin_memory: true
 
   val:
     name: REDS4
     type: REDSRecurrentDataset
-    dataroot_gt: /root/proj/Datasets/REDS/sharp_data/train_sharp    #val_sharp
-    dataroot_lq: /root/proj/Datasets/REDS/bicubic_data/train_sharp_bicubic/X4    #val_sharp_bicubic/X4
+    # dataroot_gt: /root/proj/Datasets/REDS/sharp_data/train_sharp    #val_sharp
+    # dataroot_lq: /root/proj/Datasets/REDS/bicubic_data/train_sharp_bicubic/X4    #val_sharp_bicubic/X4
+    dataroot_gt: datasets/REDS/train/train_sharp
+    dataroot_lq: datasets/REDS/train/train_sharp_bicubic/X4
     meta_info_file: basicsr/data/meta_info/meta_info_REDS_GT.txt
     val_partition: REDS4  # set to 'official' when use the official validation partition
     io_backend:
@@ -56,8 +60,8 @@ datasets:
 network_g:
   type: BasicVSR
   num_feat: 64
-  num_block: 30
-  spynet_path: pretrained_models/network-sintel-final.pytorch
+  num_block: 7
+  opticalflow_path: pretrained_models/spynet-sintel-final.pytorch
 
 # path
 path:
@@ -75,15 +79,15 @@ train:
 
   scheduler:
     type: CosineAnnealingRestartLR
-    periods: [300000]
+    periods: [35000]
     # periods: [250000, 250000, 250000, 250000]
     restart_weights: [1]
     eta_min: !!float 1e-7
 
-  total_iter: 300000
+  total_iter: 35000
   warmup_iter: -1  # no warm up
   fix_iter: 5000
-  spynet_lr_mul: 0.125
+  of_lr_mul: 0.125
 
   # losses
   pixel_opt:
@@ -93,7 +97,8 @@ train:
 
 # validation settings
 val:
-  val_freq: !!float 5e3
+  # val_freq: !!float 5e3
+  val_freq: !!float 2
   save_img: true
 
   metrics:
@@ -104,7 +109,8 @@ val:
 
 # logging settings
 logger:
-  print_freq: 100
+  # print_freq: 100
+  print_freq: 1
   save_checkpoint_freq: !!float 5e3
   use_tb_logger: true
   wandb:

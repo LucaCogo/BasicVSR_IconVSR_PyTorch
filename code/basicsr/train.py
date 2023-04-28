@@ -1,3 +1,9 @@
+import sys
+import os
+from os import path as osp
+sys.path.append(os.getcwd()) # fast fixing path issues
+
+
 import argparse
 import datetime
 import logging
@@ -5,7 +11,6 @@ import math
 import random
 import time
 import torch
-from os import path as osp
 
 from basicsr.data import create_dataloader, create_dataset
 from basicsr.data.data_sampler import EnlargedSampler

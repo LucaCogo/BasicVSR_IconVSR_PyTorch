@@ -9,6 +9,8 @@ from basicsr.models.video_base_model import VideoBaseModel
 from basicsr.utils import imwrite, tensor2img
 from basicsr.utils.dist_util import get_dist_info
 
+import ipdb
+
 metric_module = importlib.import_module('basicsr.metrics')
 
 logger = logging.getLogger('basicsr')
@@ -31,10 +33,10 @@ class BasicVSRModel(VideoBaseModel):
 
     def setup_optimizers(self):
         train_opt = self.opt['train']
-        spynet_lr_mul = train_opt.get('spynet_lr_mul', 1)
+        of_lr_mul = train_opt.get('of_lr_mul', 1)
         logger.info('Multiple the learning rate '
-                    f'for spynet with {spynet_lr_mul}.')
-        if spynet_lr_mul == 1:
+                    f'for spynet with {of_lr_mul}.')
+        if of_lr_mul == 1:
             optim_params = self.net_g.parameters()
         else:  # separate dcn params and normal params for differnet lr
             normal_params = []
@@ -51,7 +53,7 @@ class BasicVSRModel(VideoBaseModel):
                 },
                 {
                     'params': spynet_params,
-                    'lr': train_opt['optim_g']['lr'] * spynet_lr_mul
+                    'lr': train_opt['optim_g']['lr'] * of_lr_mul
                 },
             ]
 
@@ -68,9 +70,10 @@ class BasicVSRModel(VideoBaseModel):
         if self.fix_iter:
             if current_iter == 1:
                 for k, v in self.net_g.named_parameters():
-                    if 'spynet' in k:
+                    if 'opticalflow' in k:
                         v.requires_grad = False
             elif current_iter == self.fix_iter + 1:
+                print("Optical Flow Network weights are now unfrozen.")
                 for v in self.net_g.parameters():
                     v.requires_grad = True
 
@@ -96,9 +99,9 @@ class BasicVSRModel(VideoBaseModel):
         pbar = tqdm(total=len(dataloader), unit='image', ascii=True)
 
         for idx, val_data in enumerate(dataloader):
-            # val_data['key'] = val_data['key'][0]
-            # clip_name = val_data['key'].split('/')[0]
-            clip_name = val_data['clip_name'][0]
+            val_data['key'] = val_data['key'][0]
+            clip_name = val_data['key'].split('/')[0]
+            # clip_name = val_data['clip_name'][0]
             self.feed_data(val_data)
             self.test()
 

@@ -108,7 +108,6 @@ class SRModel(BaseModel):
 
         l_total.backward()
         self.optimizer_g.step()
-
         self.log_dict = self.reduce_loss_dict(loss_dict)
 
     def test(self):
