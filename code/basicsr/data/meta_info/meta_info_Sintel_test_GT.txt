@@ -1,0 +1,8 @@
+temple_2_01
+shaman_3_02
+mountain_1_01
+bamboo_2_01
+market_2_00
+mountain_1_00
+ambush_3_00
+market_6_00

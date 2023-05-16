@@ -1,7 +1,8 @@
-env/
-tmp/
-code/experiments/
-code/tb_logger/
+code/datasets
+code/experiments
+code/results
+code/tb_logger
 
-# Add to gitignore all the __pycache__ folders
-**/__pycache__/
+env/
+
+__pycache__/

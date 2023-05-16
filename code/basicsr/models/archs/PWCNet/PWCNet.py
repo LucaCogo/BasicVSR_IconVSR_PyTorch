@@ -208,7 +208,7 @@ class PWCNet(torch.nn.Module):
             
             def forward(self, tenInput):
                 return self.netMain(tenInput)
-                    
+                
         self.netExtractor = Extractor()
 
         self.netTwo = Decoder(2)
@@ -216,7 +216,7 @@ class PWCNet(torch.nn.Module):
         self.netFou = Decoder(4)
         self.netFiv = Decoder(5)
         self.netSix = Decoder(6)
-
+        
         self.netRefiner = Refiner()
         
         self.load_path = load_path

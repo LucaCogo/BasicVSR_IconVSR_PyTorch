@@ -31,7 +31,11 @@ class BasicVSR(nn.Module):
         self.num_block = num_block
 
         # Flow-based Feature Alignment
-        if "raft" in opticalflow_path.lower():
+        if opticalflow_path=="RAFT":
+            self.opticalflow = RAFT(small = False, load_path= None)
+        elif opticalflow_path=="SpyNet":
+            self.opticalflow = SpyNet(load_path= None)
+        elif "raft" in opticalflow_path.lower():  
             small = True if "small" in opticalflow_path.lower() else False
             self.opticalflow = RAFT(small = small, load_path=opticalflow_path)
         elif "spynet" in opticalflow_path.lower():

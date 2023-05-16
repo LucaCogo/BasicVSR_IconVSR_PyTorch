@@ -60,6 +60,11 @@ class Vimeo90KDataset(data.Dataset):
         self.file_client = None
         self.io_backend_opt = opt['io_backend']
         self.is_lmdb = False
+
+        self.is_train = opt.get('is_train', False)
+
+        self.num_frame = opt['num_frame']
+
         if self.io_backend_opt['type'] == 'lmdb':
             self.is_lmdb = True
             self.io_backend_opt['db_paths'] = [self.lq_root, self.gt_root]
@@ -90,12 +95,22 @@ class Vimeo90KDataset(data.Dataset):
         clip, seq = key.split('/')  # key example: 00001/0001
 
         # get the GT frame (im4.png)
-        if self.is_lmdb:
-            img_gt_path = f'{key}/im4'
-        else:
-            img_gt_path = self.gt_root / clip / seq / 'im4.png'
-        img_bytes = self.file_client.get(img_gt_path, 'gt')
-        img_gt = imfrombytes(img_bytes, float32=True)
+        # if self.is_lmdb:
+        #     img_gt_path = f'{key}/im4'
+        # else:
+        #     img_gt_path = self.gt_root / clip / seq / 'im4.png'
+        # img_bytes = self.file_client.get(img_gt_path, 'gt')
+        # img_gt = imfrombytes(img_bytes, float32=True)
+
+        img_gts = []
+        for neighbor in self.neighbor_list:
+            if self.is_lmdb:
+                img_gt_path = f'{clip}/{seq}/im{neighbor}'
+            else:
+                img_gt_path = self.gt_root / clip / seq / f'im{neighbor}.png'
+            img_bytes = self.file_client.get(img_gt_path, 'gt')
+            img_gt = imfrombytes(img_bytes, float32=True)
+            img_gts.append(img_gt)
 
         # get the neighboring LQ frames
         img_lqs = []
@@ -109,22 +124,25 @@ class Vimeo90KDataset(data.Dataset):
             img_lqs.append(img_lq)
 
         # randomly crop
-        img_gt, img_lqs = paired_random_crop(img_gt, img_lqs, gt_size, scale,
+        if self.is_train:
+            img_gts, img_lqs = paired_random_crop(img_gts, img_lqs, gt_size, scale,
                                              img_gt_path)
 
         # augmentation - flip, rotate
-        img_lqs.append(img_gt)
-        img_results = augment(img_lqs, self.opt['use_flip'],
+        img_lqs.extend(img_gts)
+
+        if self.is_train:
+            img_lqs = augment(img_lqs, self.opt['use_flip'],
                               self.opt['use_rot'])
 
-        img_results = img2tensor(img_results)
-        img_lqs = torch.stack(img_results[0:-1], dim=0)
-        img_gt = img_results[-1]
+        img_results = img2tensor(img_lqs)
+        img_lqs = torch.stack(img_results[:self.num_frame], dim=0)
+        img_gts = torch.stack(img_results[self.num_frame:], dim=0)
 
         # img_lqs: (t, c, h, w)
         # img_gt: (c, h, w)
         # key: str
-        return {'lq': img_lqs, 'gt': img_gt, 'key': key}
+        return {'lq': img_lqs, 'gt': img_gts, 'key': key, 'frame_list': list(range(len(img_lqs)))}
 
     def __len__(self):
         return len(self.keys)

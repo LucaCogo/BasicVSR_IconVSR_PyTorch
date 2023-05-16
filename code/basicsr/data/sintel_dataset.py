@@ -8,8 +8,8 @@ from basicsr.utils import FileClient, get_root_logger, imfrombytes, img2tensor
 
 import ipdb
 
-class REDSRecurrentDataset(data.Dataset):
-    """REDS recurrent dataset for training.
+class SintelDataset(data.Dataset):
+    """Sintel recurrent dataset for training.
 
     The keys are generated from a meta info txt file.
     basicsr/data/meta_info/meta_info_REDS_GT.txt
@@ -47,7 +47,7 @@ class REDSRecurrentDataset(data.Dataset):
     """
 
     def __init__(self, opt):
-        super(REDSRecurrentDataset, self).__init__()
+        super(SintelDataset, self).__init__()
         self.opt = opt
         
         self.gt_root, self.lq_root = Path(opt['dataroot_gt']), Path(
@@ -60,57 +60,16 @@ class REDSRecurrentDataset(data.Dataset):
         self.num_half_frames = opt['num_frame'] // 2
         self.keys = []
 
-        if self.is_train:
-            with open(opt['meta_info_file'], 'r') as fin:
+        with open(opt['meta_info_file'], 'r') as fin:
                 for line in fin:
-                    folder, frame_num, _ = line.split(' ')
+                    folder= line.split()[0]
                     self.keys.extend(
-                        [f'{folder}/{i:08d}' for i in range(int(frame_num))])
-        else:
-            with open(opt['meta_info_file'], 'r') as fin:
-                for line in fin:
-                    folder, frame_num, _ = line.split(' ')
-                    frame_num = int(frame_num)
-                    assert int(frame_num) % opt['num_frame'] == 0, (
-                        f'frame_num of "{folder}" is not divided by '
-                        f'{opt["num_frame"]}')
-                    self.keys.extend([
-                        f'{folder}/{i:08d}' for i in range(
-                            self.num_half_frames, 100, self.num_frame)
-                    ])
-
-        # remove the video clips used in validation
-        if opt['val_partition'] == 'REDS4':
-            test_partition = ['000', '011', '015', '020']
-            val_partition = ['240', '241', '246', '257']
-        elif opt['val_partition'] == 'official':
-            val_partition = [f'{v:03d}' for v in range(240, 270)]
-        else:
-            raise ValueError(
-                f'Wrong validation partition {opt["val_partition"]}.'
-                f"Supported ones are ['official', 'REDS4'].")
-        
-        if self.is_train:
-            self.keys = [
-                v for v in self.keys if v.split('/')[0] not in val_partition and v.split('/')[0] not in test_partition
-            ]
-        elif self.is_val:
-            self.keys = [
-                v for v in self.keys if v.split('/')[0] in val_partition
-            ]
-        elif self.is_test:
-            self.keys = [
-                v for v in self.keys if v.split('/')[0] in test_partition
-            ]
+                        [f'{folder}/{i:06d}' for i in range(self.num_frame)])
         
         # file client (io backend)
         self.file_client = None
         self.io_backend_opt = opt['io_backend']
-        self.is_lmdb = False
-        if self.io_backend_opt['type'] == 'lmdb':
-            self.is_lmdb = True
-            self.io_backend_opt['db_paths'] = [self.lq_root, self.gt_root]
-            self.io_backend_opt['client_keys'] = ['lq', 'gt']
+        
 
         # temporal augmentation configs
         self.interval_list = opt['interval_list']
@@ -137,16 +96,16 @@ class REDSRecurrentDataset(data.Dataset):
         # ensure not exceeding the borders
         start_frame_idx = center_frame_idx - self.num_half_frames * interval
         end_frame_idx = start_frame_idx + (self.num_frame - 1) * interval
-        # each clip has 100 frames starting from 0 to 99
-        while (start_frame_idx < 0) or (end_frame_idx > 99):
+        # each clip has 100 frames starting from 0 to 14
+        while (start_frame_idx < 0) or (end_frame_idx > 14):
             center_frame_idx = random.randint(
                                     self.num_half_frames * interval, 
-                                    99 - self.num_half_frames *interval)
+                                    14 - self.num_half_frames *interval)
             start_frame_idx = (center_frame_idx - self.num_half_frames * interval)
             end_frame_idx = start_frame_idx + (self.num_frame - 1) * interval
-        frame_name = f'{center_frame_idx:08d}'
+        frame_name = f'{center_frame_idx:06d}'
         frame_list = list(
-            range(start_frame_idx, end_frame_idx + 1, interval))
+            range(start_frame_idx, self.num_frame, interval))
         # random reverse
         if self.random_reverse and random.random() < 0.5:
             frame_list.reverse()
@@ -157,11 +116,7 @@ class REDSRecurrentDataset(data.Dataset):
         # get the GT frame (as the center frame)
         img_gts = []
         for frame in frame_list:
-            if self.is_lmdb:
-                img_gt_path = f'{clip_name}/{frame:08d}'
-            else:
-                img_gt_path = self.gt_root / clip_name / f'{frame:08d}.png'
-            
+            img_gt_path = self.gt_root / clip_name / f'{frame:06d}.png'
             img_bytes = self.file_client.get(img_gt_path, 'gt')
             img_gt = imfrombytes(img_bytes, float32=True)
             img_gts.append(img_gt)
@@ -169,10 +124,7 @@ class REDSRecurrentDataset(data.Dataset):
         # get the LQ frames
         img_lqs = []
         for frame in frame_list:
-            if self.is_lmdb:
-                img_lq_path = f'{clip_name}/{frame:08d}'
-            else:
-                img_lq_path = self.lq_root / clip_name / f'{frame:08d}.png'
+            img_lq_path = self.lq_root / clip_name / f'{frame:06d}.png'
             img_bytes = self.file_client.get(img_lq_path, 'lq')
             img_lq = imfrombytes(img_bytes, float32=True)
             img_lqs.append(img_lq)
@@ -195,7 +147,6 @@ class REDSRecurrentDataset(data.Dataset):
         # img_lqs: (t, c, h, w)
         # img_gt: (t, c, h, w)
         # key: str
-        
         return {'lq': img_lqs, 'gt': img_gts, 'key': key, 'frame_list': frame_list}
         
 

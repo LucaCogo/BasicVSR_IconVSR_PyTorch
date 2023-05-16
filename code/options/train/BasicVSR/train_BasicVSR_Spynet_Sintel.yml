@@ -1,31 +1,26 @@
-# CUDA_VISIBLE_DEVICES=0 python basicsr/train.py -opt options/train/BasicVSR/train_BasicVSR_RAFT.yml
-
 # general settings
-# name: exp
-name: BasicVSR_64x7_RAFT_from_scratch_REDS512
-
+name: BasicVSR_Spynet_Sintel
 model_type: BasicVSRModel
 scale: 4
-num_gpu: 2  # set num_gpu: 0 for cpu mode
+num_gpu: 1  # set num_gpu: 0 for cpu mode
 manual_seed: 10
 
 # dataset and data loader settings
 datasets:
   train:
-    name: REDS
-    type: REDSRecurrentDataset
+    name: Sintel
+    type: SintelDataset
     # dataroot_gt: /root/proj/Datasets/REDS/sharp_data/train_sharp
     # dataroot_lq: /root/proj/Datasets/REDS/bicubic_data/train_sharp_bicubic/X4
-    dataroot_gt: datasets/REDS/train/train_sharp
-    dataroot_lq: datasets/REDS/train/train_sharp_bicubic/X4
-    meta_info_file: basicsr/data/meta_info/meta_info_REDS_GT.txt
-    val_partition: REDS4  # set to 'official' when use the official validation partition
+    dataroot_gt: datasets/Sintel/vsr/hq
+    dataroot_lq: datasets/Sintel/vsr/lq
+    meta_info_file: basicsr/data/meta_info/meta_info_Sintel_train_GT.txt
     io_backend:
       type: disk
 
     is_train: true
     num_frame: 15
-    gt_size: 512
+    gt_size: 256
     interval_list: [1]
     random_reverse: false
     use_flip: true
@@ -34,25 +29,24 @@ datasets:
     # data loader
     use_shuffle: true
     num_worker_per_gpu: 6
-    batch_size_per_gpu: 1
+    batch_size_per_gpu: 4
     dataset_enlarge_ratio: 1
     prefetch_mode: ~
     pin_memory: true
 
   val:
-    name: REDS4
-    type: REDSRecurrentDataset
+    name: Sintelval
+    type: SintelDataset
     # dataroot_gt: /root/proj/Datasets/REDS/sharp_data/train_sharp    #val_sharp
     # dataroot_lq: /root/proj/Datasets/REDS/bicubic_data/train_sharp_bicubic/X4    #val_sharp_bicubic/X4
-    dataroot_gt: datasets/REDS/train/train_sharp
-    dataroot_lq: datasets/REDS/train/train_sharp_bicubic/X4
-    meta_info_file: basicsr/data/meta_info/meta_info_REDS_GT.txt
-    val_partition: REDS4  # set to 'official' when use the official validation partition
+    dataroot_gt: datasets/Sintel/vsr/hq
+    dataroot_lq: datasets/Sintel/vsr/lq
+    meta_info_file: basicsr/data/meta_info/meta_info_Sintel_val_GT.txt
     io_backend:
       type: disk
 
     is_val: true
-    num_frame: 100
+    num_frame: 15
     gt_size: ~
     interval_list: [1]
     random_reverse: false
@@ -65,17 +59,14 @@ network_g:
   type: BasicVSR
   num_feat: 64
   num_block: 7
-  # opticalflow_path: basicsr/models/archs/RAFT/models/raft-sintel.pth
-  opticalflow_path: RAFT
-
+  opticalflow_path: pretrained_models/spynet-sintel-final.pytorch
 
 # path
 path:
-  # pretrain_network_g: experiments/experiments/models/net_g_5000.pth
   pretrain_network_g: ~
   strict_load_g: false
-  # resume_state: experiments/experiments/training_states/5000.state
   resume_state: ~
+
 # training settings
 train:
   optim_g:
@@ -93,8 +84,7 @@ train:
 
   total_iter: 35000
   warmup_iter: -1  # no warm up
-  # fix_iter: 5000
-  fix_iter: 1 # 1 for instant training of optical flow network
+  fix_iter: 5000
   of_lr_mul: 0.125
 
   # losses
@@ -118,7 +108,7 @@ val:
 # logging settings
 logger:
   print_freq: 100
-  # print_freq: 1
+  #print_freq: 1
   save_checkpoint_freq: !!float 5e3
   use_tb_logger: true
   wandb:

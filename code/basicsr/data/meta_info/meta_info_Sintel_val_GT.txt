@@ -1,0 +1,8 @@
+temple_3_01
+market_4_00
+bandage_1_00
+cave_4_01
+sleeping_1_02
+temple_2_00
+bamboo_2_02
+market_1_00

@@ -1,4 +1,4 @@
-name: BasicVSR_Vid4_Sharp_BI_nf15b8_x4_Y
+name: BasicVSR_64x7_RAFT_Vimeo90K
 model_type: BasicVSRModel
 scale: 4
 num_gpu: 2  # set num_gpu: 0 for cpu mode
@@ -8,8 +8,8 @@ datasets:
   test:
     name: Vid4
     type: VidTestDataset
-    dataroot_gt: /root/proj/Datasets/Vid4/GT    #val_sharp
-    dataroot_lq: /root/proj/Datasets/Vid4/BIx4    #val_sharp_bicubic/X4
+    dataroot_gt: datasets/Vid4/GT    #val_sharp
+    dataroot_lq: datasets/Vid4/LQ    #val_sharp_bicubic/X4
     io_backend:
       type: disk
 
@@ -17,11 +17,14 @@ datasets:
 network_g:
   type: BasicVSR
   num_feat: 64
-  num_block: 30
+  num_block: 7
+  opticalflow_path: basicsr/models/archs/RAFT/models/raft-small-3.pth
+  # opticalflow_path: pretrained_models/spynet-sintel-final.pytorch
+
 
 # path
 path:
-  pretrain_network_g: experiments/BasicVSR_REDS_Sharp_BI_nf15b8_x4/models/net_g_300000.pth
+  pretrain_network_g: experiments/BasicVSR_64x7_RAFT_Vimeo90K/models/net_g_35000.pth
   strict_load_g: true
 
 # validation settings

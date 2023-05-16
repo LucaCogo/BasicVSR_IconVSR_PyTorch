@@ -1,5 +1,6 @@
 import logging
 from copy import deepcopy
+import os
 import os.path as osp
 import importlib
 from tqdm import tqdm
@@ -8,6 +9,7 @@ from torch.nn.parallel import DistributedDataParallel
 from basicsr.models.video_base_model import VideoBaseModel
 from basicsr.utils import imwrite, tensor2img
 from basicsr.utils.dist_util import get_dist_info
+import pandas as pd
 
 import ipdb
 
@@ -67,12 +69,12 @@ class BasicVSRModel(VideoBaseModel):
         self.optimizers.append(self.optimizer_g)
 
     def optimize_parameters(self, current_iter):
-        if self.fix_iter:
-            if current_iter == 1:
+        if self.fix_iter is not None:
+            if current_iter < self.fix_iter:
                 for k, v in self.net_g.named_parameters():
                     if 'opticalflow' in k:
                         v.requires_grad = False
-            elif current_iter == self.fix_iter + 1:
+            elif current_iter == self.fix_iter:
                 print("Optical Flow Network weights are now unfrozen.")
                 for v in self.net_g.parameters():
                     v.requires_grad = True
@@ -97,11 +99,14 @@ class BasicVSRModel(VideoBaseModel):
             }
 
         pbar = tqdm(total=len(dataloader), unit='image', ascii=True)
-
+        
+        results = []
         for idx, val_data in enumerate(dataloader):
-            val_data['key'] = val_data['key'][0]
-            clip_name = val_data['key'].split('/')[0]
-            # clip_name = val_data['clip_name'][0]
+            if dataset_name == "Vid4":
+                clip_name = val_data['clip_name'][0]
+            else:
+                val_data['key'] = val_data['key'][0]
+                clip_name = val_data['key'].split('/')[0]
             self.feed_data(val_data)
             self.test()
 
@@ -131,8 +136,10 @@ class BasicVSRModel(VideoBaseModel):
                         save_img_name = osp.join(
                             self.opt['path']['visualization'], dataset_name,
                             clip_name, '{idx:08d}_.png')
-                            
+                
                 for sr_img_idx, sr_img in zip(val_data['frame_list'], sr_imgs):
+                    if not osp.exists(osp.dirname(save_img_name)):
+                        os.makedirs(osp.dirname(save_img_name))
                     imwrite(sr_img, save_img_name.format(idx=sr_img_idx.item()))
 
             if with_metrics:
@@ -141,15 +148,22 @@ class BasicVSRModel(VideoBaseModel):
                 for name, opt_ in opt_metric.items():
                     metric_type = opt_.pop('type')
                     metric_ = getattr(metric_module, metric_type)
+
                     metric_results_ = [
                         metric_(sr, gt, **opt_)
                         for sr, gt in zip(sr_imgs, gt_imgs)
                     ]
                     self.metric_results[name] += torch.tensor(
                         sum(metric_results_) / len(metric_results_))
+                    
+                results.append({'seq' : val_data['key'],
+                                'psnr' : sum(metric_results_) / len(metric_results_)})
+                
             pbar.update(1)
             pbar.set_description(f'Test {clip_name}')
         pbar.close()
+
+        # ipdb.set_trace()
 
         if with_metrics:
             for metric in self.metric_results.keys():

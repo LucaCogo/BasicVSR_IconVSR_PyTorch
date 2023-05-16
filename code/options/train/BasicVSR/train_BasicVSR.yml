@@ -1,8 +1,9 @@
 # general settings
-name: BasicVSR_64x7__SpyNet_REDS
+name: BasicVSR_64x7_SpyNet_from_scratch_REDS512
+# name: exp
 model_type: BasicVSRModel
 scale: 4
-num_gpu: 1  # set num_gpu: 0 for cpu mode
+num_gpu: 2  # set num_gpu: 0 for cpu mode
 manual_seed: 10
 
 # dataset and data loader settings
@@ -21,7 +22,7 @@ datasets:
 
     is_train: true
     num_frame: 15
-    gt_size: 256
+    gt_size: 512
     interval_list: [1]
     random_reverse: false
     use_flip: true
@@ -30,7 +31,7 @@ datasets:
     # data loader
     use_shuffle: true
     num_worker_per_gpu: 6
-    batch_size_per_gpu: 2
+    batch_size_per_gpu: 1
     dataset_enlarge_ratio: 1
     prefetch_mode: ~
     pin_memory: true
@@ -47,7 +48,7 @@ datasets:
     io_backend:
       type: disk
 
-    is_train: false
+    is_val: true
     num_frame: 100
     gt_size: ~
     interval_list: [1]
@@ -61,7 +62,9 @@ network_g:
   type: BasicVSR
   num_feat: 64
   num_block: 7
-  opticalflow_path: pretrained_models/spynet-sintel-final.pytorch
+  # opticalflow_path: pretrained_models/spynet-sintel-final.pytorch
+  opticalflow_path: SpyNet
+
 
 # path
 path:
@@ -86,7 +89,8 @@ train:
 
   total_iter: 35000
   warmup_iter: -1  # no warm up
-  fix_iter: 5000
+  # fix_iter: 
+  fix_iter: 1 # 1 for instant training of optical flow network
   of_lr_mul: 0.125
 
   # losses
@@ -97,8 +101,8 @@ train:
 
 # validation settings
 val:
-  # val_freq: !!float 5e3
-  val_freq: !!float 2
+  val_freq: !!float 5e3
+  # val_freq: !!float 2
   save_img: true
 
   metrics:
@@ -109,8 +113,8 @@ val:
 
 # logging settings
 logger:
-  # print_freq: 100
-  print_freq: 1
+  print_freq: 100
+  #print_freq: 1
   save_checkpoint_freq: !!float 5e3
   use_tb_logger: true
   wandb:

@@ -155,7 +155,7 @@ def main():
 
     # initialize loggers
     logger, tb_logger = init_loggers(opt)
-
+    
     # create train and validation dataloaders
     result = create_train_val_dataloader(opt, logger)
     train_loader, train_sampler, val_loader, total_epochs, total_iters = result
@@ -232,7 +232,7 @@ def main():
                                                opt['val']['val_freq'] == 0):
                 model.validation(val_loader, current_iter, tb_logger,
                                  opt['val']['save_img'])
-
+            
             data_time = time.time()
             iter_time = time.time()
             train_data = prefetcher.next()
@@ -254,3 +254,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
